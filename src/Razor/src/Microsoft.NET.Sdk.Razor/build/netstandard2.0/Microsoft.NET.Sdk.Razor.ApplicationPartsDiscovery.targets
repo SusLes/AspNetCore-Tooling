@@ -1,0 +1,47 @@
+<!--
+***********************************************************************************************
+Microsoft.NET.Sdk.Razor.ApplicationPartsDiscovery
+
+WARNING:  DO NOT MODIFY this file unless you are knowledgeable about MSBuild and have
+          created a backup copy.  Incorrect changes to this file will make it
+          impossible to load or build your projects from the command-line or the IDE.
+
+Copyright (c) .NET Foundation. All rights reserved.
+***********************************************************************************************
+-->
+
+<Project ToolsVersion="14.0">
+  <UsingTask
+    TaskName="Microsoft.AspNetCore.Razor.Tasks.DiscoverApplicationParts"
+    AssemblyFile="$(RazorSdkBuildTasksAssembly)"
+    Condition="'$(RazorSdkBuildTasksAssembly)' != ''" />
+
+  <PropertyGroup>
+    <_MvcApplicationPartsFile>$(IntermediateOutputPath)$(TargetName).MvcApplicationParts.cs</_MvcApplicationPartsFile>
+    <_RazorToolAssembly Condition="'$(_RazorToolAssembly)'==''">$(RazorSdkDirectoryRoot)tools\netcoreapp3.0\rzc.dll</_RazorToolAssembly>
+
+    <PrepareResourcesDependsOn>
+      _DiscoverMvcApplicationParts;
+      $(PrepareResourcesDependsOn);
+    </PrepareResourcesDependsOn>
+  </PropertyGroup>
+  
+  <Target
+    Name="_DiscoverMvcApplicationParts"
+    Inputs="$(MSBuildAllProjects);@(ResolveAssemblyReferencesStateFile)"
+    Outputs="$(_MvcApplicationPartsFile)"
+    DependsOnTargets="ResolveAssemblyReferences"
+    Condition="'$(_TargetingNETCoreApp30OrLater)' == 'true' AND '$(OutputType)' == 'exe'">
+
+    <DiscoverApplicationParts
+      CurrentAssembly="$(TargetName)"
+      ResolvedReferences="@(ReferencePath)"
+      GeneratedFile="$(_MvcApplicationPartsFile)" />
+
+    <ItemGroup>
+      <FileWrites Include="$(_MvcApplicationPartsFile)" />
+      <EmbeddedResource Include="$(_MvcApplicationPartsFile)" LogicalName="Microsoft.AspNetCore.Mvc.ApplicationParts.list" />
+    </ItemGroup>
+  </Target>
+
+</Project>
