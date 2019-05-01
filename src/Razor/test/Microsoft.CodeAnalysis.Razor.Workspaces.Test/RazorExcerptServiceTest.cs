@@ -34,6 +34,33 @@ namespace Microsoft.CodeAnalysis.Razor
         }
 
         [Fact(Skip = "This test is flakey due to https://github.com/dotnet/roslyn/issues/31548. Skipping until the blocking issue is resolved.")]
+        public async Task TryGetExcerptInternalAsync_ClearsDocumentSnapshotStoredState()
+        {
+            // Arrange
+            var (sourceText, primarySpan) = CreateText(
+@"
+<html>
+@{
+    var foo = ""Hello, World!"";
+}
+  <body>@|foo|</body>
+  <div>@(3 + 4)</div><div>@(foo + foo)</div>
+</html>
+");
+
+            var (documentSnapshot, secondary) = Initialize(sourceText);
+            var service = CreateExcerptService(documentSnapshot);
+
+            var secondarySpan = await GetSecondarySpanAsync(documentSnapshot, primarySpan, secondary);
+
+            // Act
+            await service.TryGetExcerptInternalAsync(secondary, secondarySpan, ExcerptModeInternal.SingleLine, CancellationToken.None);
+
+            // Assert
+            Assert.False(documentSnapshot.TryGetGeneratedOutput(out _));
+        }
+
+        [Fact(Skip = "This test is flakey due to https://github.com/dotnet/roslyn/issues/31548. Skipping until the blocking issue is resolved.")]
         public async Task TryGetExcerptInternalAsync_SingleLine_CanClassifyCSharp()
         {
             // Arrange

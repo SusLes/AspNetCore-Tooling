@@ -30,6 +30,12 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
 
         public abstract Task<VersionStamp> GetGeneratedOutputVersionAsync();
 
+        /// <summary>
+        /// Clears cached output to reduce overall committed memory in larger applications. Otherwise, we hold onto
+        /// the output which contains SyntaxTrees, IR documents etc.
+        /// </summary>
+        public abstract void ClearStoredState();
+
         public abstract bool TryGetText(out SourceText result);
 
         public abstract bool TryGetTextVersion(out VersionStamp result);

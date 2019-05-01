@@ -130,6 +130,14 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
             return (await _loaderTask.ConfigureAwait(false)).Version;
         }
 
+        public void ClearStoredState()
+        {
+            lock (_lock)
+            {
+                ComputedState.Reset();
+            }
+        }
+
         public bool TryGetText(out SourceText result)
         {
             if (_sourceText != null)
@@ -286,6 +294,18 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
 
             public bool IsResultAvailable => TaskUnsafe?.IsCompleted == true;
 
+            public void Reset()
+            {
+                lock (_lock)
+                {
+                    if (TaskUnsafe != null)
+                    {
+                        // Dereference the result task so it can be garbage collected.
+                        TaskUnsafe = null;
+                    }
+                }
+            }
+
             public Task<(RazorCodeDocument, VersionStamp, VersionStamp)> GetGeneratedOutputAndVersionAsync(DefaultProjectSnapshot project, DocumentSnapshot document)
             {
                 if (project == null)
@@ -298,18 +318,15 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
                     throw new ArgumentNullException(nameof(document));
                 }
 
-                if (TaskUnsafe == null)
+                lock (_lock)
                 {
-                    lock (_lock)
+                    if (TaskUnsafe == null)
                     {
-                        if (TaskUnsafe == null)
-                        {
-                            TaskUnsafe = GetGeneratedOutputAndVersionCoreAsync(project, document);
-                        }
+                        TaskUnsafe = GetGeneratedOutputAndVersionCoreAsync(project, document);
                     }
-                }
 
-                return TaskUnsafe;
+                    return TaskUnsafe;
+                }
             }
 
             private async Task<(RazorCodeDocument, VersionStamp, VersionStamp)> GetGeneratedOutputAndVersionCoreAsync(DefaultProjectSnapshot project, DocumentSnapshot document)
@@ -359,15 +376,16 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
                 RazorCodeDocument olderOutput = null;
                 var olderInputVersion = default(VersionStamp);
                 var olderOutputVersion = default(VersionStamp);
-                if (_older?.TaskUnsafe != null)
+                var olderTaskUnsafe = _older?.TaskUnsafe;
+                if (olderTaskUnsafe != null)
                 {
-                    (olderOutput, olderInputVersion, olderOutputVersion) = await _older.TaskUnsafe.ConfigureAwait(false);
+                    (olderOutput, olderInputVersion, olderOutputVersion) = await olderTaskUnsafe.ConfigureAwait(false);
                     if (inputVersion.GetNewerVersion(olderInputVersion) == olderInputVersion)
                     {
                         // Nothing has changed, we can use the cached result.
                         lock (_lock)
                         {
-                            TaskUnsafe = _older.TaskUnsafe;
+                            TaskUnsafe = olderTaskUnsafe;
                             _older = null;
                             return (olderOutput, olderInputVersion, olderOutputVersion);
                         }
@@ -416,8 +434,8 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
                 if (olderOutput != null)
                 {
                     if (string.Equals(
-                        olderOutput.GetCSharpDocument().GeneratedCode, 
-                        csharpDocument.GeneratedCode, 
+                        olderOutput.GetCSharpDocument().GeneratedCode,
+                        csharpDocument.GeneratedCode,
                         StringComparison.Ordinal))
                     {
                         outputVersion = olderOutputVersion;

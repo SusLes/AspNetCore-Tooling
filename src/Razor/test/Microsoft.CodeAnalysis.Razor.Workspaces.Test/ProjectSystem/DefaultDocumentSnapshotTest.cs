@@ -67,6 +67,34 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
         }
 
         [Fact]
+        public async Task ClearStoredState_OnRegenerationMaintainsOutputVersion()
+        {
+            // Arrange
+            var initialOutputVersion = await LegacyDocument.GetGeneratedOutputVersionAsync();
+            LegacyDocument.ClearStoredState();
+
+            // Act
+            var regeneratedOutputVersion = await LegacyDocument.GetGeneratedOutputVersionAsync();
+
+            // Assert
+            Assert.Equal(initialOutputVersion, regeneratedOutputVersion);
+        }
+
+        [Fact]
+        public async Task ClearStoredState_RemovesCachedOutput()
+        {
+            // Arrange
+            await LegacyDocument.GetGeneratedOutputAsync();
+
+            // Act
+            LegacyDocument.ClearStoredState();
+
+            // Assert
+            Assert.False(LegacyDocument.TryGetGeneratedOutput(out _));
+            Assert.False(LegacyDocument.TryGetGeneratedOutputVersionAsync(out _));
+        }
+
+        [Fact]
         public async Task GetGeneratedOutputAsync_SetsHostDocumentOutput()
         {
             // Act

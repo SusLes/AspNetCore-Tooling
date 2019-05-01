@@ -19,9 +19,29 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
         private HostProject HostProject { get; }
         private HostDocument HostDocument { get; }
 
+        [Fact]
+        public async Task LoadTextAndVersionAsync_ClearsDocumentStoredState()
+        {
+            // Arrange
+            var project = new DefaultProjectSnapshot(
+                ProjectState.Create(Workspace.Services, HostProject)
+                .WithAddedHostDocument(HostDocument, () =>
+                {
+                    return Task.FromResult(TextAndVersion.Create(SourceText.From(""), VersionStamp.Create()));
+                }));
+            var document = project.GetDocument(HostDocument.FilePath);
+            var loader = new GeneratedDocumentTextLoader(document, "file.cshtml");
+
+            // Act
+            var textAndVersion = await loader.LoadTextAndVersionAsync(default, default, default);
+
+            // Assert
+            Assert.False(document.TryGetGeneratedOutput(out _));
+        }
+
         // See https://github.com/aspnet/AspNetCore/issues/7997
         [Fact]
-        public async Task LoadAsync_SpecifiesEncoding()
+        public async Task LoadTextAndVersionAsync_SpecifiesEncoding()
         {
             // Arrange
             var project = new DefaultProjectSnapshot(

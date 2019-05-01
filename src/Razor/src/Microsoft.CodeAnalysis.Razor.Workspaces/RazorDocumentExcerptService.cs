@@ -77,6 +77,12 @@ namespace Microsoft.CodeAnalysis.Razor
             // Then we'll classify the spans based on the primary document, since that's the coordinate
             // space that our output mappings use.
             var output = await _document.GetGeneratedOutputAsync().ConfigureAwait(false);
+
+            // It's possible the excerpt piece of code exists in lots of Razor documents that were generated in the background. Therefore
+            // we clear out the documents state once we've gotten the information we care about in order to ensure we don't consume
+            // too much memory trying to determine excerpts.
+            _document.ClearStoredState();
+
             var mappings = output.GetCSharpDocument().SourceMappings;
             var classifiedSpans = await ClassifyPreviewAsync(
                 primaryText, 

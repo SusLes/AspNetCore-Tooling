@@ -68,6 +68,11 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
             return version;
         }
 
+        public override void ClearStoredState()
+        {
+            State.ClearStoredState();
+        }
+
         public override bool TryGetText(out SourceText result)
         {
             return State.TryGetText(out result);

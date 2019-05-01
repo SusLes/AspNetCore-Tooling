@@ -66,6 +66,11 @@ namespace Microsoft.CodeAnalysis.Razor.ProjectSystem
             return Task.FromResult(_version);
         }
 
+        public override void ClearStoredState()
+        {
+            throw new NotImplementedException();
+        }
+
         public override bool TryGetText(out SourceText result)
         {
             if (_sourceText != null)
